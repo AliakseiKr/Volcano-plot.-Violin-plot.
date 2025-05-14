@@ -1,0 +1,67 @@
+#Kod do analizy danych RNA-Seq napisano w Pythonie z wykorzystaniem bibliotek pandas, matplotlib i numpy. 
+#Inspirację do wizualizacji typu volcano zaczerpnięto z ogólnodostępnych przykładów dokumentacji Matplotlib
+
+import matplotlib.pyplot as wkrs
+import numpy as licz
+import pandas as tab
+
+#Parametry progów
+próg_logfc = 0.58
+próg_log10padj = -licz.log10(0.05)
+
+#Wczytanie danych DESeq2
+dane = tab.read_csv(
+    r"C:\Users\lesha\Desktop\wyniki Deseq2\Galaxy194-[BMDM do AM DESeq2 result file on data 110, data 106, and others].tabular",
+    sep="\t",
+    header=None,
+    names=["GeneID", "baseMean", "log2(FC)", "lfcSE", "stat", "pvalue", "padj"]
+)
+
+#Wczytanie listy genów proteaz
+with open(r"C:\Users\lesha\Desktop\Spis genów proteaz jakie są w Deseq2(bez nazw genów). BMDM do AM.txt", "r", encoding="utf-8") as f:
+    lista_genow = [linia.strip().split()[0] for linia in f if linia.strip()]
+
+#Czyszczenie danych
+dane = dane[dane["padj"].notna() & dane["log2(FC)"].notna()]
+dane["-log10(padj)"] = -licz.log10(dane["padj"])
+dane["color"] = "black"
+
+#Kolorowanie punktów
+dane.loc[(dane["padj"] < 0.05) & (dane["log2(FC)"] > próg_logfc), "color"] = "grey"
+dane.loc[(dane["padj"] < 0.05) & (dane["log2(FC)"] < -próg_logfc), "color"] = "lightgreen"
+dane.loc[(dane["GeneID"].isin(lista_genow)) & 
+         (dane["padj"] < 0.05) & 
+         (abs(dane["log2(FC)"]) > próg_logfc), "color"] = "purple"
+
+#Volcano plot
+wkrs.figure(figsize=(12, 6))
+wkrs.scatter(dane["log2(FC)"], dane["-log10(padj)"], color=dane["color"], alpha=0.9)
+
+#Linie pomocnicze
+wkrs.axhline(y=próg_log10padj, color="red", linestyle="--", linewidth=1, label="padj = 0.05")
+wkrs.axvline(x=0, color="black", linestyle="--", linewidth=1)
+
+#Podpisywanie istotnych genów proteaz
+proteazy_znaczące = dane[
+    (dane["GeneID"].isin(lista_genow)) &
+    (dane["-log10(padj)"] > próg_log10padj) &
+    (abs(dane["log2(FC)"]) > próg_logfc)
+]
+for _, row in proteazy_znaczące.iterrows():
+    wkrs.text(row["log2(FC)"], row["-log10(padj)"], row["GeneID"],
+             fontsize=8, color="purple", rotation=45, ha="left", va="bottom")
+
+#Podpisywanie top 10 genów o największym |log2(FC)|
+top10 = dane.loc[dane["padj"] < 0.05].copy()
+top10 = top10.reindex(top10["log2(FC)"].abs().sort_values(ascending=False).index).head(10)
+for _, row in top10.iterrows():
+    wkrs.text(row["log2(FC)"], row["-log10(padj)"], row["GeneID"],
+             fontsize=8, color="blue", rotation=45, ha="right", va="top")
+
+#Opisy osi
+wkrs.xlabel("log2(FC)")
+wkrs.ylabel("-log10(padj)")
+wkrs.title("Volcano plot: geny proteaz + top 10 najbardziej różniących się genów")
+wkrs.legend()
+wkrs.tight_layout()
+wkrs.show()
