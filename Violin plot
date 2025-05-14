@@ -1,0 +1,39 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Wczytaj dane
+plik = r"C:\Users\lesha\Downloads\Violin_final_AM_PM.tabular"
+df = pd.read_csv(plik, sep="\t")
+
+# Styl
+sns.set_theme(style="darkgrid", font_scale=1.2)
+
+
+plt.figure(figsize=(10, 6))
+
+# Violin plot z punktami wewnątrz i ładną linią gęstości
+sns.violinplot(
+    x="Próbka",
+    y="Ekspresja",
+    data=df,
+    inner="point",
+    palette="Set1",     
+    linewidth=1.5
+)
+
+# Tytuł i osie
+plt.title("Ekspresja proteaz w próbkach AM i BMDM", fontsize=16, weight='bold')
+plt.xlabel("Próbka", fontsize=14)
+plt.ylabel("Ekspresja", fontsize=14)
+
+
+sns.despine(trim=True)
+plt.grid(True, color='gray', linestyle=':', linewidth=0.5)
+plt.tight_layout()
+
+plt.savefig("violin_plot_protease_final_clean.png", dpi=300)
+plt.show()
+
+
+
